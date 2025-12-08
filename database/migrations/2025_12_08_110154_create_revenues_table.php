@@ -11,20 +11,17 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('expenses', function (Blueprint $table) {
+        Schema::create('revenues', function (Blueprint $table) {
             $table->id();
-            $table->string('expense_number')->unique();
-            $table->foreignId('expense_category_id')->constrained()->cascadeOnDelete();
+            $table->string('revenue_number')->unique();
             $table->date('date');
+            $table->string('source'); // Sumber pendapatan (Penjualan, Jasa, dll)
             $table->string('description');
             $table->decimal('amount', 15, 2);
             $table->enum('payment_method', ['cash', 'transfer', 'card'])->default('cash');
-            $table->string('reference_type')->nullable();
-            $table->unsignedBigInteger('reference_id')->nullable();
-            $table->string('receipt_number')->nullable();
-            $table->string('paid_to')->nullable();
-            $table->foreignId('approved_by')->nullable()->constrained('users')->nullOnDelete();
-            $table->enum('status', ['pending', 'approved', 'rejected', 'paid'])->default('pending');
+            $table->string('reference_number')->nullable(); // No. Invoice/Bukti
+            $table->string('customer_name')->nullable();
+            $table->enum('status', ['pending', 'received'])->default('pending');
             $table->text('notes')->nullable();
             $table->timestamps();
         });
@@ -35,6 +32,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('expenses');
+        Schema::dropIfExists('revenues');
     }
 };
