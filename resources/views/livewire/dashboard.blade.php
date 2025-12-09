@@ -164,17 +164,22 @@
 
         <!-- Profit/Loss -->
         <div class="bg-gradient-to-br {{ $monthlyProfit >= 0 ? 'from-green-500 to-green-600' : 'from-red-500 to-red-600' }} rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 p-8 text-white transform hover:-translate-y-1">
-            <p class="text-white text-opacity-90 text-xs font-semibold uppercase tracking-wide mb-3">
-                {{ $monthlyProfit >= 0 ? 'Profit' : 'Loss' }} 
-                @php
-                    $months = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des'];
-                    if ($startMonth == $endMonth && $startYear == $endYear) {
-                        echo "({$months[$startMonth]} {$startYear})";
-                    } else {
-                        echo "({$months[$startMonth]} {$startYear} - {$months[$endMonth]} {$endYear})";
-                    }
-                @endphp
-            </p>
+            <div class="flex items-center justify-between mb-3">
+                <p class="text-white text-opacity-90 text-xs font-semibold uppercase tracking-wide">
+                    {{ $monthlyProfit >= 0 ? 'Profit' : 'Loss' }} 
+                    @php
+                        $months = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des'];
+                        if ($startMonth == $endMonth && $startYear == $endYear) {
+                            echo "({$months[$startMonth]} {$startYear})";
+                        } else {
+                            echo "({$months[$startMonth]} {$startYear} - {$months[$endMonth]} {$endYear})";
+                        }
+                    @endphp
+                </p>
+                <button wire:click="$set('showBepModal', true)" class="bg-white bg-opacity-20 hover:bg-opacity-30 rounded-full px-3 py-1 text-[11px] font-medium flex items-center gap-1 transition-all">
+                    <span>💡 BEP</span>
+                </button>
+            </div>
             <p class="text-4xl font-bold">{{ $monthlyProfit >= 0 ? '+' : '-' }}Rp {{ number_format(abs($monthlyProfit) / 1000000, 1) }}jt</p>
             <p class="text-sm text-white text-opacity-80 mt-2">Revenue - Expenses</p>
             <!-- Debug Info -->
@@ -218,6 +223,11 @@
                 @else
                     <p>Monthly Profit: Rp {{ number_format(abs($burnRate)/1000000, 1) }}M</p>
                     <p class="text-green-200">📈 Survival Mode Calculation</p>
+                @endif
+                @if($bepMonths && $bepMonths > 0)
+                    <p class="text-[11px] text-white text-opacity-80 mt-1">BEP: {{ number_format($bepYears, 1) }} thn (~ {{ number_format($bepMonths, 1) }} bln)</p>
+                @else
+                    <p class="text-[11px] text-red-100 mt-1">BEP: belum bisa dihitung (profit rata-rata belum positif)</p>
                 @endif
             </div>
         </div>
@@ -547,6 +557,114 @@
                     </div>
                 </div>
 
+            </div>
+        </div>
+    @endif
+
+    <!-- BEP (Break Even Point) Modal -->
+    @if($showBepModal)
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+                <!-- Modal Header -->
+                <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between rounded-t-lg">
+                    <h3 class="text-2xl font-bold text-gray-900">📈 Detail Perhitungan BEP (Break Even Point)</h3>
+                    <button wire:click="$set('showBepModal', false)" class="text-gray-400 hover:text-gray-600 transition-colors">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Modal Content -->
+                <div class="p-6 space-y-6">
+                    <div class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-lg">
+                        <h4 class="text-lg font-semibold text-blue-900 mb-1">🧠 Konsep BEP di Sistem Ini</h4>
+                        <p class="text-sm text-blue-800">BEP di sini adalah <strong>waktu</strong> yang dibutuhkan sampai <strong>modal awal / modal inti kembali</strong>, berdasarkan <strong>profit rata-rata per bulan</strong> di periode yang Anda pilih.</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="bg-white rounded-lg border border-gray-200 p-4">
+                            <p class="text-xs text-gray-500 font-semibold uppercase mb-1">Modal Awal / Modal Inti</p>
+                            <p class="text-2xl font-bold text-gray-900">Rp {{ number_format($modalInti, 0, ',', '.') }}</p>
+                        </div>
+                        <div class="bg-white rounded-lg border border-gray-200 p-4">
+                            <p class="text-xs text-gray-500 font-semibold uppercase mb-1">Profit Rata-rata Per Bulan</p>
+                            <p class="text-2xl font-bold {{ $averageMonthlyProfit > 0 ? 'text-green-700' : 'text-red-700' }}">Rp {{ number_format($averageMonthlyProfit, 0, ',', '.') }}</p>
+                            <p class="text-xs text-gray-500 mt-1">Berdasarkan {{ $monthsDiff }} bulan di range filter</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                        <h4 class="text-sm font-semibold text-gray-800 mb-2">🔢 Rumus yang Dipakai</h4>
+                        <div class="text-xs text-gray-800 bg-white rounded-md p-3 overflow-x-auto whitespace-pre-line">
+BEP (bulan) = Modal Awal ÷ Profit Rata-rata Per Bulan
+
+Modal Awal = Rp {{ number_format($modalInti, 0, ',', '.') }}
+Profit Rata-rata = Rp {{ number_format($averageMonthlyProfit, 0, ',', '.') }}/bulan
+                        </div>
+                    </div>
+
+                    <div class="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-4 border border-indigo-200">
+                        <h4 class="text-sm font-semibold text-indigo-900 mb-2">📊 Hasil Perhitungan BEP</h4>
+                        @if($bepMonths && $bepMonths > 0)
+                            <div class="text-sm text-indigo-800 mb-3 space-y-1">
+                                @foreach(explode("\n", $bepExplanation) as $line)
+                                    @if(trim($line) !== '')
+                                        <p>{{ $line }}</p>
+                                    @endif
+                                @endforeach
+                            </div>
+                            <div class="mt-2 flex items-baseline gap-2">
+                                <p class="text-4xl font-bold text-indigo-900">{{ number_format($bepYears, 1) }}</p>
+                                <p class="text-lg font-semibold text-indigo-700">tahun</p>
+                                <p class="text-sm text-indigo-600">(~ {{ number_format($bepMonths, 1) }} bulan)</p>
+                            </div>
+                        @else
+                            <p class="text-sm text-red-700">{{ $bepExplanation }}</p>
+                        @endif
+                    </div>
+
+                    <!-- Comparison: Runway vs BEP -->
+                    <div class="bg-white rounded-lg border border-gray-200 p-4">
+                        <h4 class="text-sm font-semibold text-gray-800 mb-3">📊 Perbandingan Runway vs BEP</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                            <div class="bg-teal-50 rounded-md p-3 border border-teal-100">
+                                <p class="text-xs font-semibold text-teal-700 uppercase mb-1">Runway (Worst-Case Profit Scenario)</p>
+                                <p class="text-lg font-bold text-teal-900">{{ $runway }}</p>
+                                <p class="text-xs text-teal-700 mt-1">Berapa lama bisnis bisa survive dengan kas sekarang jika masuk survival mode.</p>
+                            </div>
+                            <div class="bg-indigo-50 rounded-md p-3 border border-indigo-100">
+                                <p class="text-xs font-semibold text-indigo-700 uppercase mb-1">BEP (Balik Modal)</p>
+                                @if($bepMonths && $bepMonths > 0)
+                                    <p class="text-lg font-bold text-indigo-900">{{ number_format($bepYears, 1) }} tahun (~ {{ number_format($bepMonths, 1) }} bulan)</p>
+                                @else
+                                    <p class="text-sm font-semibold text-red-700">Belum bisa dihitung (profit rata-rata belum positif).</p>
+                                @endif
+                                <p class="text-xs text-indigo-700 mt-1">Berapa lama sampai modal awal kembali dengan profit rata-rata sekarang.</p>
+                            </div>
+                        </div>
+
+                        @if($bepMonths && $bepMonths > 0)
+                            <div class="mt-3 text-xs text-gray-700">
+                                @if($bepMonths < ($runwayMonths ?? $bepMonths))
+                                    <p>✅ <strong>BEP lebih cepat</strong> daripada habisnya kas (runway). Artinya, jika tren profit bertahan, modal kembali sebelum kas habis.</p>
+                                @else
+                                    <p>⚠️ <strong>BEP lebih lama</strong> daripada runway. Artinya, jika tidak ada tambahan modal/investor, ada risiko kas habis sebelum modal kembali.</p>
+                                @endif
+                            </div>
+                        @endif
+                    </div>
+
+                    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg">
+                        <h4 class="text-sm font-semibold text-yellow-900 mb-2">💡 Interpretasi Praktis</h4>
+                        <ul class="text-xs text-yellow-800 space-y-1">
+                            <li>• BEP &lt; 12 bulan → Sangat cepat, bisnis sangat menguntungkan.</li>
+                            <li>• 12 &le; BEP &lt; 36 bulan → Masih wajar untuk banyak bisnis.</li>
+                            <li>• BEP &ge; 36 bulan → Perlu review model bisnis & struktur biaya.</li>
+                            <li>• Jika profit rata-rata masih negatif → Fokus perbaiki profit dulu sebelum mengejar BEP.</li>
+                        </ul>
+                    </div>
+                </div>
             </div>
         </div>
     @endif

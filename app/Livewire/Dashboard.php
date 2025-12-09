@@ -22,6 +22,7 @@ class Dashboard extends Component
     public $endYear;
     public $preset = 'current_month';
     public $showRunwayModal = false;
+    public $showBepModal = false;
     
     public function mount()
     {
@@ -146,6 +147,12 @@ class Dashboard extends Component
         $totalMonthlyExpenses = $monthlyExpenses + $monthlySalaries;
         $monthlyProfit = $monthlyRevenues - $totalMonthlyExpenses;
         $burnRate = $totalMonthlyExpenses - $monthlyRevenues; // Negative if profitable
+
+        // Hitung jumlah bulan dalam range untuk rata-rata & BEP
+        $monthsDiff = ($this->endYear - $this->startYear) * 12 + ($this->endMonth - $this->startMonth) + 1;
+        if ($monthsDiff <= 0) {
+            $monthsDiff = 1;
+        }
         
         // Business sustainability - Detailed runway calculation
         $runway = null;
@@ -182,6 +189,28 @@ class Dashboard extends Component
             $runway = round($runwayMonths, 1) . ' bulan';
         }
 
+        // BEP (Break Even Point) calculation based on profit rata-rata per bulan
+        $averageMonthlyProfit = $monthlyProfit / $monthsDiff;
+        $bepMonths = null;
+        $bepYears = null;
+        $bepExplanation = '';
+
+        if ($averageMonthlyProfit > 0 && $modalInti > 0) {
+            $bepMonths = $modalInti / $averageMonthlyProfit;
+            $bepYears = $bepMonths / 12;
+
+            $bepExplanation = "Konsep: BEP = Berapa lama sampai modal awal kembali.\n";
+            $bepExplanation .= "Modal Awal / Modal Inti: Rp " . number_format($modalInti, 0, ',', '.') . "\n";
+            $bepExplanation .= "Profit Rata-rata per Bulan: Rp " . number_format($averageMonthlyProfit, 0, ',', '.') . " (berdasarkan {$monthsDiff} bulan terpilih)\n";
+            $bepExplanation .= "BEP (bulan) = Modal Awal ÷ Profit Bulanan = Rp " . number_format($modalInti, 0, ',', '.') . " ÷ Rp " . number_format($averageMonthlyProfit, 0, ',', '.') . " = " . round($bepMonths, 1) . " bulan";
+        } else {
+            if ($averageMonthlyProfit <= 0) {
+                $bepExplanation = "Belum bisa menghitung BEP karena bisnis masih rugi atau belum profit secara rata-rata di periode yang dipilih.";
+            } elseif ($modalInti <= 0) {
+                $bepExplanation = "Modal awal / modal inti belum diisi, sehingga BEP belum bisa dihitung.";
+            }
+        }
+
         // Business age
         $businessAge = $settings->getBusinessAgeInMonths();
         $businessAgeDays = $settings->getBusinessAgeInDays();
@@ -213,11 +242,16 @@ class Dashboard extends Component
             'monthlyRevenues' => $monthlyRevenues,
             'monthlyProfit' => $monthlyProfit,
             'burnRate' => $burnRate,
+            'monthsDiff' => $monthsDiff,
             'runway' => $runway,
             'runwayMonths' => $runwayMonths,
             'runwayScenario' => $runwayScenario,
             'runwayCalculation' => $runwayCalculation,
             'minimalOperatingCost' => $minimalOperatingCost,
+            'averageMonthlyProfit' => $averageMonthlyProfit,
+            'bepMonths' => $bepMonths,
+            'bepYears' => $bepYears,
+            'bepExplanation' => $bepExplanation,
             'businessAge' => $businessAge,
             'businessAgeDays' => $businessAgeDays,
             'expensesByCategory' => $expensesByCategory,
